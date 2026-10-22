@@ -1,0 +1,31 @@
+[
+  {
+    "iteration": 0,
+    "objective": 1.226730359313808,
+    "gradient_norm": 0.28835201590810344,
+    "step": 1.0
+  },
+  {
+    "iteration": 1,
+    "objective": 1.2075229947169124,
+    "gradient_norm": 0.026025682261586386,
+    "step": 1.0
+  },
+  {
+    "iteration": 2,
+    "objective": 1.2073740369316115,
+    "gradient_norm": 0.000311965617260369,
+    "step": 1.0
+  },
+  {
+    "iteration": 3,
+    "objective": 1.2073740180244348,
+    "gradient_norm": 5.129890219748673e-08,
+    "step": 1.0
+  },
+  {
+    "iteration": 4,
+    "objective": 1.2073740180244346,
+    "gradient_norm": 1.5614824077120563e-15
+  }
+]

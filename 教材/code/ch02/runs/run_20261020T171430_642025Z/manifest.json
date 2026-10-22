@@ -1,0 +1,22 @@
+{
+  "data_kind": "synthetic",
+  "as_of": "2025-01-06T01:34:00+00:00",
+  "python_note": "existing Anaconda interpreter",
+  "numpy": "2.1.3",
+  "pandas": "2.2.3",
+  "input_rows": 16,
+  "status_counts": {
+    "accepted": 15,
+    "not_available": 1
+  },
+  "panel_shape": [
+    4,
+    4
+  ],
+  "valid_returns": {
+    "EQ_DEMO": 3,
+    "BOND_DEMO": 3,
+    "GOLD_DEMO": 1,
+    "FX_DEMO": 3
+  }
+}

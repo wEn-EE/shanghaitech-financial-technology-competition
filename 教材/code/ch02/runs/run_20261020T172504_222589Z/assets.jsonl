@@ -1,0 +1,4 @@
+{"source":"SYNTHETIC","symbol":"EQ_DEMO","asset_class":"equity","monitor_weight":0.4}
+{"source":"SYNTHETIC","symbol":"BOND_DEMO","asset_class":"bond","monitor_weight":0.3}
+{"source":"SYNTHETIC","symbol":"GOLD_DEMO","asset_class":"commodity","monitor_weight":0.2}
+{"source":"SYNTHETIC","symbol":"FX_DEMO","asset_class":"fx","monitor_weight":0.1}

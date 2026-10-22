@@ -1,0 +1,43 @@
+{
+  "data_kind": "synthetic",
+  "numpy": "2.1.3",
+  "pandas": "2.2.3",
+  "train_rows": 8,
+  "evaluation_rows": 4,
+  "train_end": "2025-01-06T01:37:00+00:00",
+  "asset_order": [
+    "EQ_DEMO",
+    "BOND_DEMO",
+    "GOLD_DEMO",
+    "FX_DEMO"
+  ],
+  "factor_order": [
+    "growth_proxy",
+    "rates_proxy"
+  ],
+  "rcond": 1e-12,
+  "shrinkage_alpha": 0.1,
+  "factor_design_rank": 3,
+  "coefficient_max_abs_error_vs_generator": 3.3306690738754696e-16,
+  "qr_lstsq_max_abs_difference": 5.551115123125783e-16,
+  "pca_numerical_rank": 3,
+  "pca_top2_variance_ratio": 0.9942395720867847,
+  "covariance_eigenvalues": [
+    7.895344870422536e-21,
+    1.7604526037404695e-06,
+    9.815753836488738e-05,
+    0.0002056934376028008
+  ],
+  "shrunk_eigenvalues": [
+    7.640285714285704e-06,
+    9.224693057652143e-06,
+    9.598207024268434e-05,
+    0.0001927643795568064
+  ],
+  "pairwise_correlation_eigenvalues": [
+    -1.0000000000000002,
+    1.9999999999999996,
+    2.0000000000000004
+  ],
+  "interpretation": "numerical demonstrations; no empirical market performance claim"
+}

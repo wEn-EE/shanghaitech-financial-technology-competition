@@ -1,0 +1,13 @@
+[
+  {
+    "iteration": 0,
+    "objective": 7.5,
+    "gradient_norm": 6.708203932499369,
+    "step": 1.0
+  },
+  {
+    "iteration": 1,
+    "objective": -0.6818181818181819,
+    "gradient_norm": 2.220446049250313e-16
+  }
+]

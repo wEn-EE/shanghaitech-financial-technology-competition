@@ -1,0 +1,72 @@
+{
+  "data_kind": "synthetic_or_user_supplied",
+  "counts": {
+    "accepted": 10,
+    "duplicate": 1,
+    "late": 1,
+    "invalid": 2,
+    "conflict": 1
+  },
+  "latest": [
+    {
+      "source": "SYNTHETIC",
+      "symbol": "BOND_DEMO",
+      "event_id": "b2",
+      "event_time": "2025-01-06T01:31:00+00:00",
+      "input_available_time": "2025-01-06T01:31:02+00:00",
+      "price": 100.2,
+      "return": 0.0020000000000000282,
+      "count": 1,
+      "mean": 0.0020000000000000282,
+      "sample_std": null,
+      "warmup": true,
+      "jump_alert": false,
+      "rule_version": "jump-v1-demo"
+    },
+    {
+      "source": "SYNTHETIC",
+      "symbol": "EQ_DEMO",
+      "event_id": "e4",
+      "event_time": "2025-01-06T01:33:00+00:00",
+      "input_available_time": "2025-01-06T01:33:01+00:00",
+      "price": 102.0,
+      "return": 0.020102010201020155,
+      "count": 3,
+      "mean": 0.006700670067006702,
+      "sample_std": 0.015319821736581673,
+      "warmup": false,
+      "jump_alert": true,
+      "rule_version": "jump-v1-demo"
+    },
+    {
+      "source": "SYNTHETIC",
+      "symbol": "FX_DEMO",
+      "event_id": "f2",
+      "event_time": "2025-01-06T01:31:00+00:00",
+      "input_available_time": "2025-01-06T01:31:04+00:00",
+      "price": 7.007,
+      "return": 0.0009999999999999534,
+      "count": 1,
+      "mean": 0.0009999999999999534,
+      "sample_std": null,
+      "warmup": true,
+      "jump_alert": false,
+      "rule_version": "jump-v1-demo"
+    },
+    {
+      "source": "SYNTHETIC",
+      "symbol": "GOLD_DEMO",
+      "event_id": "g2",
+      "event_time": "2025-01-06T01:31:00+00:00",
+      "input_available_time": "2025-01-06T01:31:03+00:00",
+      "price": 2020.0,
+      "return": 0.01,
+      "count": 1,
+      "mean": 0.01,
+      "sample_std": null,
+      "warmup": true,
+      "jump_alert": false,
+      "rule_version": "jump-v1-demo"
+    }
+  ]
+}
