@@ -1,0 +1,4 @@
+# Newly generated caches and experiment runs; tracked historical files remain tracked.
+__pycache__/
+.pytest_cache/
+code/*/runs/
