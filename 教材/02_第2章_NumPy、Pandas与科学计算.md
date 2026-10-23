@@ -784,7 +784,7 @@ w=(0.4,\ 0.3,\ 0.2,\ 0.1)
 ```math
 M_{t,a}=
 \begin{cases}
-1,&R_{t,a}\text{有效}\\
+1,&R_{t,a}\text{有效}\\[0pt]
 0,&\text{否则}
 \end{cases}
 ```
@@ -1572,11 +1572,11 @@ s_1=\sqrt{0.0002/(2-1)}
 ```math
 X-\mu
 = \begin{pmatrix}
-2-3&10-12\\
+2-3&10-12\\[0pt]
 4-3&14-12
 \end{pmatrix}
 = \begin{pmatrix}
--1&-2\\
+-1&-2\\[0pt]
 1&2
 \end{pmatrix}
 ```
@@ -1592,11 +1592,11 @@ X-\mu
 ```math
 X-\mu[:,None]
 = \begin{pmatrix}
-2-3&10-3\\
+2-3&10-3\\[0pt]
 4-12&14-12
 \end{pmatrix}
 = \begin{pmatrix}
--1&7\\
+-1&7\\[0pt]
 -8&2
 \end{pmatrix}
 ```

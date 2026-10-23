@@ -25,11 +25,16 @@ class MathBoundaryTests(unittest.TestCase):
         value, _ = transform_document(source)
         self.assertEqual(code_fences(source), code_fences(value))
 
-    def test_list_math_indentation(self):
+    def test_nested_math_requires_editorial_move(self):
         source = '4. 问题：\n\n   ```math\n   M=\\begin{pmatrix}1&2\\\\3&4\\end{pmatrix}\n   ```\n\n   解释。\n'
+        with self.assertRaises(ValueError):
+            transform_document(source)
+
+    def test_matrix_row_at_source_line_end(self):
+        source = '```math\nM=\\begin{pmatrix}\n1&2\\\\\n3&4\n\\end{pmatrix}\n```\n'
         value, records = transform_document(source)
-        self.assertEqual(value, source)
-        self.assertEqual(len(records), 1)
+        self.assertIn('1&2\\\\[0pt]\n3&4', value)
+        self.assertEqual(transform_document(value)[0], value)
 
     def test_inline_matrix_requires_editorial_move(self):
         with self.assertRaises(ValueError):

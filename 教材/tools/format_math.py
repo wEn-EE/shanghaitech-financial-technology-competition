@@ -30,7 +30,10 @@ def normalize_formula(source):
     value = re.sub(r'\{\\rm\s+([A-Za-z]+)\}', lambda m: r'{\mathrm{'+m[1]+'}}', value)
     # A bare equals line can be interpreted as a Setext heading by Markdown.
     value = re.sub(r'(?m)^\s*=\s*\n', '= ', value)
-    return '\n'.join(line.rstrip() for line in value.strip().splitlines())
+    value='\n'.join(line.rstrip() for line in value.strip().splitlines())
+    # GitHub adds an extra slash when a math-fence source line ends in \\.
+    # An explicit zero additional row gap avoids that line-ending rewrite.
+    return value.replace(r'\\'+'\n',r'\\[0pt]'+'\n')
 
 
 def transform_document(text):
@@ -74,6 +77,8 @@ def transform_document(text):
         else:
             m=MATH_FENCE.fullmatch(part)
             if m:
+                if m['indent']:
+                    raise ValueError('GitHub does not render nested math fences; use a numbered subsection instead')
                 before=textwrap.dedent(m['body']).strip()
                 after=normalize_formula(before)
                 records.append({'kind':'display','source':after,'original':before})
