@@ -89,6 +89,7 @@ def experiment(x, y, ready):
             'final_train_ids': tr.tolist(), 'test_ids': test.tolist(), 'model': model,
             'prediction': pred.tolist(), 'test_mse': float(np.mean((pred-y[test])**2)),
             'baseline_mse': float(np.mean((baseline-y[test])**2)),
+            'persistence_mse': float(np.mean((x[test, 0]-y[test])**2)),
             'x': x.tolist(), 'y': y.tolist(), 'label_ready': ready.tolist()}
 
 
@@ -103,7 +104,7 @@ def main():
     (out/'manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
     print(out)
     print([(t['mode'], t['mean_mse']) for t in result['trials']])
-    print(result['chosen'], result['test_mse'], result['baseline_mse'])
+    print(result['chosen'], result['test_mse'], result['baseline_mse'], result['persistence_mse'])
     print('train sizes', [len(f['train_ids']) for f in result['trials'][0]['folds']], len(result['final_train_ids']))
 
 if __name__ == '__main__': main()
