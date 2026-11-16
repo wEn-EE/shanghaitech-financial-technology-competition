@@ -170,9 +170,9 @@ def stability(folds, name):
     }
 
 
-def evaluate(payload):
+def evaluate(payload, starts=OUTER_STARTS):
     rows = prepare(payload)
-    folds = [outer_fold(rows, start) for start in OUTER_STARTS]
+    folds = [outer_fold(rows, start) for start in starts]
     return {"schema": "ch24.nested.v1", "data_kind": "SYNTHETIC",
             "input_model_id": payload["model_id"], "folds": folds,
             "mean_delta_mse": float(np.mean([f["delta_mse"] for f in folds])),

@@ -33,7 +33,9 @@ class Engine:
             raise ValueError("invalid price; upstream quarantine required")
         if not math.isfinite(b["notional"]) or b["notional"] < 0:
             raise ValueError("invalid notional")
-        if p is not None and not (math.isfinite(b["bid"]) and math.isfinite(b["ask"])
+        has_quote = b["bid"] is not None or b["ask"] is not None
+        if p is not None and has_quote and not (b["bid"] is not None and b["ask"] is not None
+                                  and math.isfinite(b["bid"]) and math.isfinite(b["ask"])
                                   and 0 < b["bid"] <= b["ask"]):
             raise ValueError("invalid quote")
         self.last = b["t"]
@@ -47,8 +49,9 @@ class Engine:
         rows = list(self.rows)
         x = dict.fromkeys(NAMES)
         if p is not None:
-            mid = (b["bid"] + b["ask"]) / 2
-            x["spread_bps"] = 10000 * (b["ask"] - b["bid"]) / mid
+            if has_quote:
+                mid = (b["bid"] + b["ask"]) / 2
+                x["spread_bps"] = 10000 * (b["ask"] - b["bid"]) / mid
             x["ema_gap"] = p / self.ema - 1
         if len(rows) >= 2 and all(valid_price(r["price"]) for r in rows[-2:]):
             x["ret1"] = rows[-1]["price"] / rows[-2]["price"] - 1
