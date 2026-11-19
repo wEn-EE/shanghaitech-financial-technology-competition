@@ -6,7 +6,7 @@ import struct
 import sys
 from time import perf_counter_ns
 from collections import Counter
-from contextlib import closing
+from contextlib import closing, suppress
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -40,9 +40,43 @@ async def read_frame(reader):
         raise EOFError("SHORT_BODY") from exc
 
 
+def setup_visibility(db):
+    db.executescript("""
+        CREATE TABLE IF NOT EXISTS observed_quote(
+          event_uid TEXT PRIMARY KEY REFERENCES event(event_uid), visible_us INTEGER NOT NULL);
+        CREATE VIEW IF NOT EXISTS consumer_quotes AS
+          SELECT e.event_uid,e.event_key,e.revision,e.event_us,q.instrument_id,q.price_atoms,
+                 r.received_us,o.visible_us,
+                 CASE WHEN o.visible_us IS NULL THEN 'UNKNOWN' ELSE 'OBSERVED' END AS visibility
+          FROM event e JOIN quote q USING(event_uid)
+          JOIN receipt r ON r.receipt_id=e.first_receipt_id
+          LEFT JOIN observed_quote o USING(event_uid);
+    """)
+
+
+def latest_visible(db, instrument, cutoff):
+    return db.execute("""SELECT price_atoms FROM consumer_quotes
+        WHERE instrument_id=? AND visible_us<=?
+        ORDER BY event_us DESC,revision DESC,event_uid LIMIT 1""",
+                      (instrument, ledger.time_us(cutoff))).fetchone()
+
+
 def persist(path, raw, received_at):
     with closing(ledger.connect(path)) as db:
-        return ledger.ingest(db, "DEMO", raw, received_at)
+        status = ledger.ingest(db, "DEMO", raw, received_at)
+        uid = None
+        if status == "ACCEPTED":
+            obj = json.loads(raw)
+            uid = db.execute("""SELECT e.event_uid FROM event e JOIN quote q USING(event_uid)
+                WHERE source_id='DEMO' AND event_key=? AND revision=?""",
+                             (obj["event_key"], obj["revision"])).fetchone()
+        return status, uid[0] if uid else None
+
+
+def observe(path, uid, stamp):
+    with closing(ledger.connect(path)) as db, db:
+        db.execute("INSERT INTO observed_quote VALUES (?,?) ON CONFLICT(event_uid) DO NOTHING",
+                   (uid, ledger.time_us(stamp)))
 
 
 async def replay(path, capacity=2, delay_ms=5):
@@ -53,6 +87,7 @@ async def replay(path, capacity=2, delay_ms=5):
     path.parent.mkdir(parents=True, exist_ok=False)
     with closing(ledger.connect(path)) as db:
         ledger.initialize(db)
+        setup_visibility(db)
     rows = ledger.samples()
     stock, bond, gold, fx = [row[0] for row in rows[:4]]
     changed_stock = json.loads(stock)
@@ -79,9 +114,12 @@ async def replay(path, capacity=2, delay_ms=5):
             await writer.drain()
             writer.write(payload[2:])
             await writer.drain()
+        except ConnectionResetError:
+            pass  # The failure-injection client may close before the batch finishes.
         finally:
             writer.close()
-            await writer.wait_closed()
+            with suppress(ConnectionResetError):
+                await writer.wait_closed()
 
     async def receive(port):
         nonlocal full, peak
@@ -118,8 +156,11 @@ async def replay(path, capacity=2, delay_ms=5):
             raw, stamp, started = item
             dequeued = perf_counter_ns()
             await asyncio.sleep(delay_ms / 1000)
-            status = await asyncio.to_thread(persist, path, raw, stamp)
-            handled.append(dict(received_at=stamp, observed_committed_at=teaching_clock(),
+            status, uid = await asyncio.to_thread(persist, path, raw, stamp)
+            observed = teaching_clock()
+            if uid:
+                await asyncio.to_thread(observe, path, uid, observed)
+            handled.append(dict(received_at=stamp, observed_committed_at=observed, event_uid=uid,
                                 admission_and_queue_ns=dequeued - started,
                                 service_observed_ns=perf_counter_ns() - dequeued,
                                 status=status))

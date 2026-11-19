@@ -26,16 +26,27 @@ def startup(db, *, recover=False):
     db.execute("""CREATE TABLE IF NOT EXISTS requests(
        id TEXT PRIMARY KEY, parent_request TEXT REFERENCES requests(id),
        stage TEXT NOT NULL, stage_run TEXT NOT NULL REFERENCES runs(id))""")
+    db.execute("""CREATE TABLE IF NOT EXISTS run_inputs(
+       consumer TEXT NOT NULL REFERENCES runs(id), role TEXT NOT NULL,
+       artifact TEXT NOT NULL REFERENCES artifacts(hash), producer TEXT REFERENCES runs(id),
+       PRIMARY KEY(consumer,role))""")
     db.commit()
     if recover:
         with db:
             db.execute("UPDATE runs SET status='FAILED',error='INTERRUPTED' WHERE status='RUNNING'")
 
 
-def stage(db, name, parents, params, implementation, action, stop=False):
+def stage(db, name, parents, params, implementation, action, stop=False, *, upstream=None):
+    upstream = dict(upstream or {})
+    for role, producer in upstream.items():
+        match = db.execute("""SELECT manifest_hash FROM runs
+            WHERE id=? AND status='SUCCESS'""", (producer,)).fetchone()
+        if not match or json.loads(read(db, match[0]))["output"] != parents[role]:
+            raise ValueError("upstream run does not supply the declared input")
     signatures = [digest(Path(path).read_bytes()) for path in (__file__, implementation, lineage_lab.__file__)]
     recipe = {"stage": name, "inputs": parents, "params": params, "code": signatures,
               "python": platform.python_version(), "numpy": np.__version__, "sqlite": sqlite3.sqlite_version}
+    recipe["upstream_runs"] = upstream
     body = canonical(recipe)
     key = digest(body)
     found = db.execute("SELECT id,manifest_hash FROM runs WHERE recipe_hash=? AND status='SUCCESS'",
@@ -58,6 +69,9 @@ def stage(db, name, parents, params, implementation, action, stop=False):
         with db:
             result = put(db, output)
             manifest = put(db, canonical({"recipe": key, "output": result}))
+            db.executemany("INSERT INTO run_inputs VALUES (?,?,?,?)",
+                           [(attempt, role, artifact, upstream.get(role))
+                            for role, artifact in parents.items()])
             for role, parent in {"recipe": key, **parents}.items():
                 db.execute("INSERT INTO edges VALUES (?,?,?,?)", (attempt, parent, result, role))
             if stop:
@@ -85,7 +99,8 @@ def run(db, raw, folds, parent=None, stop=False):
     def evaluate(v, p):
         return nested_lab.evaluate(v["fusion"], starts=p["folds"])
     validation = stage(db, "validation", {"fusion": feature["output"]},
-                       {"folds": folds}, nested_lab.__file__, evaluate, stop)
+                       {"folds": folds}, nested_lab.__file__, evaluate, stop,
+                       upstream={"fusion": feature["run"]})
     request = str(uuid.uuid4())
     stages = {"fusion": feature, "quote_coverage": coverage, "validation": validation}
     with db:
@@ -102,6 +117,21 @@ def ancestors(db, key):
        JOIN runs r ON r.id=e.run_id WHERE r.status='SUCCESS')
        SELECT hash FROM lineage ORDER BY hash"""
     return [r[0] for r in db.execute(sql, (key,))]
+
+
+def trace_run(db, run_id):
+    row = db.execute("SELECT recipe_hash FROM runs WHERE id=? AND status='SUCCESS'",
+                     (run_id,)).fetchone()
+    if row is None:
+        raise ValueError("unknown successful run")
+    recipe = json.loads(read(db, row[0]))
+    if "upstream_runs" not in recipe:
+        return {"run": run_id, "lineage": "UNKNOWN_LEGACY"}
+    inputs = {}
+    for role, artifact, producer in db.execute(
+            "SELECT role,artifact,producer FROM run_inputs WHERE consumer=? ORDER BY role", (run_id,)):
+        inputs[role] = {"artifact": artifact, "producer": trace_run(db, producer) if producer else None}
+    return {"run": run_id, "inputs": inputs}
 
 
 def load_raw(path):
@@ -145,6 +175,8 @@ def main():
         assert retry["fusion"]["cached"] and retry["quote_coverage"]["cached"] and not retry["validation"]["cached"]
         validation_id = retry["validation"]["output"]
         links = ancestors(db, validation_id)
+        decision_trace = trace_run(db, retry["validation"]["run"])
+        assert decision_trace["inputs"]["fusion"]["producer"]["run"] == first["fusion"]["run"]
         assert digest(canonical(raw)) in links
         assert first["validation"]["output"] != validation_id
         assert json.loads(read(db, first["validation"]["output"]))["folds"][:2] == json.loads(read(db, validation_id))["folds"]
@@ -153,7 +185,7 @@ def main():
         changed, _ = run(db, changed_raw, [48,64], parent=request)
         assert changed["quote_coverage"]["cached"]
         assert not changed["fusion"]["cached"] and not changed["validation"]["cached"]
-        info = {"news_edit": changed, "first": first, "recovered": retry, "repeated": hit, "ancestors": links, "initial_request": request, "recovered_request": retry_request,
+        info = {"decision_trace": decision_trace, "news_edit": changed, "first": first, "recovered": retry, "repeated": hit, "ancestors": links, "initial_request": request, "recovered_request": retry_request,
                 "interrupted": db.execute("SELECT COUNT(*) FROM runs WHERE error='INTERRUPTED'").fetchone()[0],
                 "integrity": db.execute("PRAGMA integrity_check").fetchone()[0]}
     (out / "report.json").write_bytes(canonical(info))

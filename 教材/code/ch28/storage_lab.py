@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import sqlite3
+from decimal import Decimal
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,7 +23,8 @@ CREATE TABLE quotes (
 LATEST = """SELECT event_s,revision,price_atoms FROM quotes
 WHERE asset=? AND event_s<=? AND ready_s<=?
 ORDER BY event_s DESC, revision DESC LIMIT 1"""
-WINDOW = """SELECT asset,event_s,revision,price_atoms FROM (
+AUDIT_FIELDS = ("asset","event_s","revision","price_atoms","scale","seed_uid","ready_s")
+WINDOW = """SELECT asset,event_s,revision,price_atoms,scale,seed_uid,ready_s FROM (
  SELECT *,row_number() OVER (
  PARTITION BY asset,event_s ORDER BY revision DESC) AS pos
  FROM quotes WHERE event_s>=? AND event_s<? AND ready_s<=?
@@ -84,22 +86,28 @@ def cold_window(directory, lo, hi, cutoff):
         if hashlib.sha256(path.read_bytes()).hexdigest() != part["sha256"]:
             raise ValueError("archive checksum mismatch")
         chosen.append(path.name)
-        table = pq.read_table(path, columns=["asset","event_s","revision","ready_s","price_atoms"])
+        table = pq.read_table(path, columns=list(AUDIT_FIELDS))
         for row in table.to_pylist():
             t, rev = row["event_s"], row["revision"]
             if lo <= t < hi and row["ready_s"] <= cutoff:
                 key = (row["asset"], t)
                 if key not in latest or latest[key][0] < rev:
-                    latest[key] = (rev, row["price_atoms"])
+                    latest[key] = tuple(row[name] for name in AUDIT_FIELDS[2:])
     return [(*key,*latest[key]) for key in sorted(latest)], chosen
 
 
 def compare(db, directory, lo, hi, cutoff):
     hot = db.execute(WINDOW, (lo,hi,cutoff)).fetchall()
     cold, selected = cold_window(directory, lo, hi, cutoff)
-    if hot != cold:
-        raise AssertionError("hot/cold rows differ")
-    return dict(rows=len(hot), files=selected, equity=[r for r in hot if r[:2]==("EQ_DEMO",60)])
+    if len(hot) != len(cold):
+        raise AssertionError(f"row count: hot={len(hot)}, cold={len(cold)}")
+    for left, right in zip(hot, cold):
+        for name, a, b in zip(AUDIT_FIELDS, left, right):
+            if a != b:
+                prices = [Decimal(r[3]).scaleb(-r[4]) for r in (left, right)]
+                raise AssertionError(f"{left[:3]} {name}: hot={a}, cold={b}; "
+                                     f"price hot={prices[0]}, cold={prices[1]}")
+    return dict(rows=len(hot), files=selected, equity=[r[:4] for r in hot if r[:2]==("EQ_DEMO",60)])
 
 
 def equity_feature(db, cutoff):
@@ -108,8 +116,11 @@ def equity_feature(db, cutoff):
     if len(pair) != 2:
         return dict(status="MISSING_INPUT", cutoff=cutoff)
     earlier, later = pair
+    previous_price, current_price = (Decimal(row[3]).scaleb(-row[4]) for row in pair)
+    if previous_price == 0:
+        return dict(status="ZERO_BASE_PRICE", cutoff=cutoff)
     return dict(status="OK", name="first_minute_return.v1", cutoff=cutoff,
-                inputs=[r[:3] for r in pair], value=later[3]/earlier[3]-1)
+                inputs=[r[:3] for r in pair], value=float(current_price/previous_price-1))
 
 
 def run(source, directory):
@@ -117,6 +128,9 @@ def run(source, directory):
     directory.mkdir(parents=True, exist_ok=False)
     with closing(sqlite3.connect(directory/"hot.db")) as db:
         load(db, records)
+        with db:
+            db.execute("CREATE TABLE import_source(path TEXT PRIMARY KEY NOT NULL)")
+            db.execute("INSERT INTO import_source VALUES (?)", (str(source.resolve()),))
         bounds = (DAY, DAY+120)
         before = db.execute(RANGE, bounds).fetchall()
         def plan():

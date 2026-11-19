@@ -43,11 +43,35 @@ class StorageTests(unittest.TestCase):
             self.assertEqual(row["inputs"][-1], ("EQ_DEMO",60,rev))
             self.assertAlmostEqual(row["value"], delta/10010)
 
+    def test_return_with_different_quote_scales(self):
+        with self.db:
+            self.db.execute("UPDATE quotes SET price_atoms=100110, scale=3 "
+                            "WHERE event_s=60 AND revision=1")
+        self.assertAlmostEqual(equity_feature(self.db,120)["value"], 1/10010)
+
     def test_corruption(self):
         with (self.path/"day-0.parquet").open("ab") as f:
             f.write(b"changed")
         with self.assertRaisesRegex(ValueError, "checksum"):
             cold_window(self.path,0,1,10)
+
+    def test_cold_scale_source_and_time(self):
+        # Generate a valid but semantically incorrect export; then restore the hot truth.
+        for field, bad, good, detail in [
+            ("scale",3,2,"price hot=100.11, cold=10.011"),
+            ("seed_uid","another-seed","seed","hot=seed, cold=another-seed"),
+            ("ready_s",62,61,"hot=61, cold=62")]:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temp:
+                stmt = f"UPDATE quotes SET {field}=? WHERE event_s=60 AND revision=1"
+                with self.db:
+                    self.db.execute(stmt,(bad,))
+                archive(self.db,Path(temp))
+                with self.db:
+                    self.db.execute(stmt,(good,))
+                with self.assertRaises(AssertionError) as caught:
+                    compare(self.db,Path(temp),60,61,120)
+                self.assertIn(field, str(caught.exception))
+                self.assertIn(detail, str(caught.exception))
 
     def test_rollback(self):
         with self.assertRaises(sqlite3.IntegrityError), self.db:

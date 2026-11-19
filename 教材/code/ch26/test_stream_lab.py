@@ -58,6 +58,9 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(report["receipts"], {"ACCEPTED": 4, "DUPLICATE": 1, "QUARANTINED": 1})
             self.assertEqual(report["events"], 4)
             with closing(lab.ledger.connect(path)) as db:
+                observed = db.execute("SELECT COUNT(DISTINCT event_uid) FROM consumer_quotes "
+                                      "WHERE visible_us >= received_us").fetchone()[0]
+                self.assertEqual(observed, 4)
                 rows = db.execute("SELECT raw,status,reason FROM receipt ORDER BY receipt_id").fetchall()
                 self.assertEqual(json.loads(rows[0][0])["body"]["price"], "100.10")
                 self.assertEqual(rows[0][0], rows[1][0])
