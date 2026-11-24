@@ -32,7 +32,8 @@
 - [第27章 分布式系统、CAP与一致性](./27_第27章_分布式系统、CAP与一致性.md) · [分区与恢复实验](./code/ch27/partition_lab.py)，输入为第26章的 market.db。
 - [第28章 分布式存储与数据库设计](./28_第28章_分布式存储与数据库设计.md) · [SQLite 与 Parquet 冷热对账](./code/ch28/storage_lab.py)，只读第26章的 market.db，比较两个截止时点的行情及特征。
 - [第29章 消息队列、发布订阅与Kafka接入](./29_第29章_消息队列、发布订阅与Kafka接入.md) · [进程退出与重放实验](./code/ch29/log_lab.py) · [Kafka客户端](./code/ch29/kafka_adapter.py)，读取第28章的 hot.db。
-- [第30章 Spark、Flink与计算引擎选型](./30_第30章_Spark、Flink与计算引擎选型.md)已完成。配套实验包括[首分钟收益回放](./code/ch30/opening_lab.py)、[分区交换](./code/ch30/exchange_lab.py)和[版本与时限验收](./code/ch30/decision_lab.py)。下一章从 31.1 开始。
+- [第30章 Spark、Flink与计算引擎选型](./30_第30章_Spark、Flink与计算引擎选型.md)已完成。配套实验包括[首分钟收益回放](./code/ch30/opening_lab.py)、[分区交换](./code/ch30/exchange_lab.py)和[版本与时限验收](./code/ch30/decision_lab.py)。
+- [第31章 事件时间、处理时间与水位线](./31_第31章_事件时间、处理时间与水位线.md)已完成。[双输入实验](./code/ch31/watermark_lab.py)比较空闲等待、迟到补报与超期审计。下一章从 32.1 开始。
 - [参考资料登记](./参考资料登记.md)：已核对的权威资料及合法入口。
 - 续写进度.md：后续接续位置。
 - code/ch01/monitor.py：第一章行情处理器，仅用标准库，演示数据全部人工构造。
